@@ -1,0 +1,71 @@
+@import url('https://api.fontshare.com/v2/css?f[]=manrope@300,400,500,600,700,800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* HomeDirectAI Brand — Dark mode first (internal tool) */
+    --background: 214 35% 8%;        /* Slate Midnight #0D1B2A */
+    --foreground: 210 20% 94%;
+
+    --card: 214 30% 11%;
+    --card-foreground: 210 20% 94%;
+
+    --popover: 214 30% 11%;
+    --popover-foreground: 210 20% 94%;
+
+    --primary: 152 100% 39%;         /* Forest Signal #00C47A */
+    --primary-foreground: 214 35% 8%;
+
+    --secondary: 214 25% 16%;
+    --secondary-foreground: 210 15% 75%;
+
+    --muted: 214 25% 14%;
+    --muted-foreground: 214 15% 55%;
+
+    --accent: 192 100% 50%;          /* Electric Teal #00D4FF — AI features */
+    --accent-foreground: 214 35% 8%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 20% 94%;
+
+    --border: 214 20% 18%;
+    --input: 214 20% 16%;
+    --ring: 152 100% 39%;
+
+    --radius: 0.5rem;
+
+    /* Brand-specific tokens */
+    --savings-gold: 45 90% 61%;      /* #F5C842 — dollar amounts only */
+    --signal-green: 152 100% 39%;
+    --electric-teal: 192 100% 50%;
+    --slate-mid: 214 35% 8%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-feature-settings: "kern" 1, "liga" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: hsl(var(--background)); }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+}
+
+@layer utilities {
+  .text-signal { color: hsl(var(--signal-green)); }
+  .text-teal   { color: hsl(var(--electric-teal)); }
+  .text-gold   { color: hsl(var(--savings-gold)); }
+  .bg-signal   { background-color: hsl(var(--signal-green)); }
+  .border-signal { border-color: hsl(var(--signal-green)); }
+}
