@@ -6,6 +6,14 @@ import { storage } from "./storage";
 import { runCompetitorMonitor } from "./competitor-monitor";
 import { runFeedbackLoop, generateWeeklyFeedback } from "./feedback-loop";
 import { startVideoJob } from "./video-generator";
+import {
+  validateKeywords,
+  deployBuyerCampaign,
+  getCampaignMetrics,
+  getCredentialStatus,
+  MissingCredentialsError,
+  type AdGroupSpec,
+} from "./google-ads";
 
 // ── ICP Context (full brand + ICP data embedded) ──────────────────────────────
 
@@ -958,6 +966,91 @@ Return exactly this JSON structure:
       res.json({ script: script.value, icp: icp?.value || "seller" });
     } else {
       res.json({ script: null, icp: null });
+    }
+  });
+
+  // ── Google Ads API ────────────────────────────────────────────────────────
+
+  // Credential status — used by the PPC Deploy tab to show which creds are set
+  app.get("/api/google-ads/status", (_req, res) => {
+    res.json({ credentials: getCredentialStatus() });
+  });
+
+  // Validate keywords against real Tampa Bay volume + CPC
+  app.post("/api/google-ads/validate-keywords", async (req, res) => {
+    try {
+      const { keywords, includeIdeas } = req.body as { keywords?: string[]; includeIdeas?: boolean };
+      if (!Array.isArray(keywords) || keywords.length === 0) {
+        return res.status(400).json({ error: "keywords must be a non-empty array of strings" });
+      }
+      const result = await validateKeywords(keywords, { includeIdeas: !!includeIdeas });
+      res.json(result);
+    } catch (e) {
+      if (e instanceof MissingCredentialsError) {
+        return res.status(503).json({ error: "Missing Google Ads credentials", missing: e.missing });
+      }
+      console.error("[google-ads] validate-keywords failed:", e);
+      res.status(500).json({ error: (e as Error).message });
+    }
+  });
+
+  // Deploy the Tampa Bay buyer campaign (PAUSED by default)
+  app.post("/api/google-ads/deploy-campaign", async (req, res) => {
+    try {
+      const {
+        campaignName,
+        dailyBudgetDollars,
+        adGroups,
+        negativeKeywords,
+        paused,
+      } = req.body as {
+        campaignName?: string;
+        dailyBudgetDollars?: number;
+        adGroups?: AdGroupSpec[];
+        negativeKeywords?: string[];
+        paused?: boolean;
+      };
+
+      if (!campaignName) return res.status(400).json({ error: "campaignName is required" });
+      if (typeof dailyBudgetDollars !== "number" || dailyBudgetDollars <= 0) {
+        return res.status(400).json({ error: "dailyBudgetDollars must be a positive number" });
+      }
+      if (!Array.isArray(adGroups) || adGroups.length === 0) {
+        return res.status(400).json({ error: "adGroups must be a non-empty array" });
+      }
+
+      const result = await deployBuyerCampaign({
+        campaignName,
+        dailyBudgetDollars,
+        adGroups,
+        negativeKeywords: negativeKeywords || [],
+        paused: paused !== false,
+      });
+      res.json(result);
+    } catch (e) {
+      if (e instanceof MissingCredentialsError) {
+        return res.status(503).json({ error: "Missing Google Ads credentials", missing: e.missing });
+      }
+      console.error("[google-ads] deploy-campaign failed:", e);
+      res.status(500).json({ error: (e as Error).message });
+    }
+  });
+
+  // Pull live performance metrics for our search campaigns
+  app.get("/api/google-ads/metrics", async (req, res) => {
+    try {
+      const dateRange = (req.query.dateRange as string) || "LAST_7_DAYS";
+      if (!["LAST_7_DAYS", "LAST_30_DAYS", "THIS_MONTH"].includes(dateRange)) {
+        return res.status(400).json({ error: "invalid dateRange" });
+      }
+      const metrics = await getCampaignMetrics(dateRange as any);
+      res.json({ dateRange, campaigns: metrics });
+    } catch (e) {
+      if (e instanceof MissingCredentialsError) {
+        return res.status(503).json({ error: "Missing Google Ads credentials", missing: e.missing });
+      }
+      console.error("[google-ads] metrics failed:", e);
+      res.status(500).json({ error: (e as Error).message });
     }
   });
 }
