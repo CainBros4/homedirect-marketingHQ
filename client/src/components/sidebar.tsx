@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Search, Settings, Zap, Target, Globe } from "lucide-react";
+import { LayoutDashboard, Search, Settings, Zap, Target, Globe, Rocket, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -11,6 +11,20 @@ const NAV = [
 ];
 
 const COMING_SOON: { label: string; icon: React.ElementType }[] = [];
+
+// Sibling apps in the Key Lime operating system. These are EXTERNAL Railway
+// services — full redirect rather than in-app routing.
+//
+// TODO: add Brand Hub (icp-hub) once it's deployed to Railway. The href
+// shape will match the others.
+const SIBLING_APPS = [
+  {
+    href: "https://homedirect-hub-production-d9ad.up.railway.app/#/launch",
+    label: "Launch Playbook",
+    icon: Rocket,
+    hint: "HomeDirect HQ · Tampa Bay launch tactics + owners",
+  },
+];
 
 export default function Sidebar() {
   const [location] = useLocation();
@@ -68,6 +82,23 @@ export default function Sidebar() {
             ))}
           </>
         )}
+
+        {/* Sibling apps — external links to the rest of the Key Lime stack */}
+        <p className="px-2 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Related Apps</p>
+        {SIBLING_APPS.map(({ href, label, icon: Icon, hint }) => (
+          <a
+            key={href}
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            title={hint}
+            className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm transition-colors group text-muted-foreground hover:text-foreground hover:bg-secondary"
+          >
+            <Icon className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground" />
+            <span className="flex-1 truncate">{label}</span>
+            <ExternalLink className="h-3 w-3 text-muted-foreground/50 group-hover:text-muted-foreground" />
+          </a>
+        ))}
       </nav>
 
       {/* Settings */}
