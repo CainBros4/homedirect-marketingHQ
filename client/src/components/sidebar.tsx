@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Search, Settings, Zap, Target, Globe, Rocket, ExternalLink } from "lucide-react";
+import { LayoutDashboard, Search, Settings, Zap, Target, Globe, Rocket, BookOpen, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -14,15 +14,18 @@ const COMING_SOON: { label: string; icon: React.ElementType }[] = [];
 
 // Sibling apps in the Key Lime operating system. These are EXTERNAL Railway
 // services — full redirect rather than in-app routing.
-//
-// TODO: add Brand Hub (icp-hub) once it's deployed to Railway. The href
-// shape will match the others.
 const SIBLING_APPS = [
   {
     href: "https://homedirect-hub-production-d9ad.up.railway.app/#/launch",
     label: "Launch Playbook",
     icon: Rocket,
     hint: "HomeDirect HQ · Tampa Bay launch tactics + owners",
+  },
+  {
+    href: "https://icp-hub-production.up.railway.app",
+    label: "Brand Hub",
+    icon: BookOpen,
+    hint: "icp-hub · philosophy, brand guide, messaging, ICPs",
   },
 ];
 
