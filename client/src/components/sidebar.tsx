@@ -99,6 +99,12 @@ export default function Sidebar() {
           >
             <Icon className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground" />
             <span className="flex-1 truncate">{label}</span>
+            {/* Live indicator — small pulsing green dot marking a deployed service */}
+            <span
+              className="h-1.5 w-1.5 rounded-full bg-signal shrink-0 animate-pulse"
+              style={{ boxShadow: "0 0 4px hsl(152,100%,39%)" }}
+              aria-label="Live"
+            />
             <ExternalLink className="h-3 w-3 text-muted-foreground/50 group-hover:text-muted-foreground" />
           </a>
         ))}
