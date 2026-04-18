@@ -1,10 +1,11 @@
-import { Switch, Route, Router } from "wouter";
+import { Switch, Route, Router, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
+import { useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/lib/auth";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import Sidebar from "@/components/sidebar";
 import Dashboard from "@/pages/dashboard";
 import Seo from "@/pages/seo";
@@ -45,12 +46,46 @@ function AppShell() {
           <Route path="/asset-library" component={AssetLibrary} />
           <Route path="/video-generator" component={VideoGenerator} />
           <Route path="/marketing" component={Marketing} />
-          <Route path="/login" component={Login} />
           <Route component={NotFound} />
         </Switch>
       </main>
     </div>
   );
+}
+
+// Global auth gate — unauth users land on /login no matter what hash they
+// hit. Applied to every route except /login itself. Once logged in, they
+// see the full app.
+function AuthedRoutes() {
+  const { user, loading } = useAuth();
+  const [location, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user && location !== "/login") {
+      setLocation("/login");
+    }
+  }, [user, loading, location, setLocation]);
+
+  if (location === "/login") {
+    return <Login />;
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-sm text-muted-foreground">Checking session…</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    // effect above will redirect, but render login immediately so we don't
+    // flash the app shell
+    return <Login />;
+  }
+
+  return <AppShell />;
 }
 
 export default function App() {
@@ -59,7 +94,7 @@ export default function App() {
       <TooltipProvider>
         <AuthProvider>
           <Router hook={useHashLocation}>
-            <AppShell />
+            <AuthedRoutes />
           </Router>
         </AuthProvider>
         <Toaster />

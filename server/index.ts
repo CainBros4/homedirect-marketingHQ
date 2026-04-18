@@ -2,6 +2,9 @@ import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import MemoryStore from "memorystore";
+// @ts-ignore — package has no shipped types, see d.ts shim not worth it
+import betterSqlite3SessionStore from "better-sqlite3-session-store";
+import BetterSqlite3 from "better-sqlite3";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -36,14 +39,31 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
-// Session — backs the marketing admin auth cookie.
-const SessionStore = MemoryStore(session);
+// Session — persistent SQLite-backed store so admin logins survive
+// container restarts. Falls back to MemoryStore only if initialization
+// somehow fails (unlikely). Sessions are stored in sessions.db alongside
+// marketing-hub.db on the Railway persistent volume.
+let sessionStore: session.Store;
+try {
+  const SqliteStore = betterSqlite3SessionStore(session);
+  const sessionDb = new BetterSqlite3("sessions.db");
+  sessionDb.pragma("journal_mode = WAL");
+  sessionStore = new SqliteStore({
+    client: sessionDb,
+    expired: { clear: true, intervalMs: 900_000 },
+  });
+} catch (err) {
+  console.warn("[session] persistent store init failed, falling back to memory:", err);
+  const Mem = MemoryStore(session);
+  sessionStore = new Mem({ checkPeriod: 86400000 });
+}
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "marketinghq-session-secret-change-in-prod",
     resave: false,
     saveUninitialized: false,
-    store: new SessionStore({ checkPeriod: 86400000 }),
+    store: sessionStore,
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
