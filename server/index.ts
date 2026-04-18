@@ -13,6 +13,12 @@ import { tickDripEngine } from "./marketing/drip-engine";
 const app = express();
 const httpServer = createServer(app);
 
+// Trust Railway's proxy so express-session's `secure: true` cookie works.
+// Railway terminates TLS at the edge and forwards plain HTTP with
+// X-Forwarded-Proto: https. Without this, Express sees http and refuses
+// to set the session cookie.
+app.set("trust proxy", 1);
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
