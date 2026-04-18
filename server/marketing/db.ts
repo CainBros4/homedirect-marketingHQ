@@ -202,6 +202,34 @@ const MARKETING_SQLITE_TABLES_SQL = `
   );
   CREATE INDEX IF NOT EXISTS idx_seo_ideas_status ON seo_article_ideas(status);
 
+  CREATE TABLE IF NOT EXISTS meta_ad_creatives (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    icp TEXT NOT NULL,
+    brief TEXT NOT NULL,
+    audience_note TEXT,
+    objective TEXT NOT NULL DEFAULT 'OUTCOME_TRAFFIC',
+    primary_text TEXT NOT NULL,
+    headline TEXT NOT NULL,
+    description TEXT,
+    cta_button TEXT NOT NULL DEFAULT 'LEARN_MORE',
+    landing_url TEXT NOT NULL,
+    aspect_ratio TEXT NOT NULL DEFAULT '1:1',
+    image_url TEXT,
+    image_prompt TEXT,
+    image_provider TEXT,
+    generation_cost_cents INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'draft',
+    rationale TEXT,
+    reviewed_by INTEGER,
+    reviewed_at TEXT,
+    launched_at TEXT,
+    meta_campaign_id TEXT,
+    meta_ad_id TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+  );
+  CREATE INDEX IF NOT EXISTS idx_meta_creatives_status ON meta_ad_creatives(status);
+
   CREATE TABLE IF NOT EXISTS seo_articles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     slug TEXT NOT NULL UNIQUE,
@@ -412,6 +440,34 @@ const MARKETING_PG_TABLES_SQL = `
     created_at TEXT NOT NULL DEFAULT ''
   );
   CREATE INDEX IF NOT EXISTS idx_seo_ideas_status ON seo_article_ideas(status);
+
+  CREATE TABLE IF NOT EXISTS meta_ad_creatives (
+    id SERIAL PRIMARY KEY,
+    icp TEXT NOT NULL,
+    brief TEXT NOT NULL,
+    audience_note TEXT,
+    objective TEXT NOT NULL DEFAULT 'OUTCOME_TRAFFIC',
+    primary_text TEXT NOT NULL,
+    headline TEXT NOT NULL,
+    description TEXT,
+    cta_button TEXT NOT NULL DEFAULT 'LEARN_MORE',
+    landing_url TEXT NOT NULL,
+    aspect_ratio TEXT NOT NULL DEFAULT '1:1',
+    image_url TEXT,
+    image_prompt TEXT,
+    image_provider TEXT,
+    generation_cost_cents INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'draft',
+    rationale TEXT,
+    reviewed_by INTEGER,
+    reviewed_at TEXT,
+    launched_at TEXT,
+    meta_campaign_id TEXT,
+    meta_ad_id TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+  );
+  CREATE INDEX IF NOT EXISTS idx_meta_creatives_status ON meta_ad_creatives(status);
 
   CREATE TABLE IF NOT EXISTS seo_articles (
     id SERIAL PRIMARY KEY,

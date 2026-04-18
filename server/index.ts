@@ -12,6 +12,7 @@ import { initMarketingDb } from "./marketing/db";
 import { setupMarketingAuth } from "./marketing/auth";
 import { registerMarketingRoutes } from "./marketing/routes";
 import { registerSeoRoutes } from "./marketing/seo/routes";
+import { registerMetaRoutes } from "./marketing/meta/routes";
 import { tickDripEngine } from "./marketing/drip-engine";
 
 const app = express();
@@ -116,6 +117,7 @@ app.use((req, res, next) => {
   setupMarketingAuth(app);
   registerMarketingRoutes(app);
   registerSeoRoutes(app);
+  registerMetaRoutes(app);
 
   await registerRoutes(httpServer, app);
 

@@ -403,3 +403,38 @@ export const seoArticles = sqliteTable("seo_articles", {
 export const insertSeoArticleSchema = createInsertSchema(seoArticles).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertSeoArticle = z.infer<typeof insertSeoArticleSchema>;
 export type SeoArticle = typeof seoArticles.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Meta (Facebook + Instagram) ad creatives
+// Housing SAC is always enforced — no demographic targeting fields stored.
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const metaAdCreatives = sqliteTable("meta_ad_creatives", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  icp: text("icp").notNull(), // buyer | seller | general
+  brief: text("brief").notNull(), // what the ad should accomplish
+  audienceNote: text("audience_note"), // freeform — for our records, not targeting
+  objective: text("objective").notNull().default("OUTCOME_TRAFFIC"), // OUTCOME_LEADS | OUTCOME_TRAFFIC | OUTCOME_ENGAGEMENT
+  primaryText: text("primary_text").notNull(), // 125 char recommended
+  headline: text("headline").notNull(), // 40 char
+  description: text("description"), // 30 char, optional
+  ctaButton: text("cta_button").notNull().default("LEARN_MORE"), // LEARN_MORE | SIGN_UP | GET_OFFER | APPLY_NOW
+  landingUrl: text("landing_url").notNull(),
+  aspectRatio: text("aspect_ratio").notNull().default("1:1"), // 1:1 | 4:5 | 9:16
+  imageUrl: text("image_url"), // hosted image url
+  imagePrompt: text("image_prompt"), // prompt used to generate it, for re-rolls
+  imageProvider: text("image_provider"), // dall-e-3 | manual
+  generationCostCents: integer("generation_cost_cents").notNull().default(0),
+  status: text("status").notNull().default("draft"), // draft | approved | rejected | launched | paused | archived
+  rationale: text("rationale"), // one-line "why this creative will work"
+  reviewedBy: integer("reviewed_by"),
+  reviewedAt: text("reviewed_at"),
+  launchedAt: text("launched_at"),
+  metaCampaignId: text("meta_campaign_id"), // post-launch
+  metaAdId: text("meta_ad_id"),
+  createdAt: text("created_at").notNull().default(""),
+  updatedAt: text("updated_at").notNull().default(""),
+});
+export const insertMetaAdCreativeSchema = createInsertSchema(metaAdCreatives).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertMetaAdCreative = z.infer<typeof insertMetaAdCreativeSchema>;
+export type MetaAdCreative = typeof metaAdCreatives.$inferSelect;

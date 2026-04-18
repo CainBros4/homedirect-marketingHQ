@@ -1,251 +1,332 @@
-import { Target, Users, Layers, Rocket, MapPin } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import TacticWorkspace, { Placeholder } from "@/components/tactic-workspace";
-import EmbeddedCopyGenerator from "@/components/embedded-copy-generator";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Sparkles, Image as ImageIcon, CheckCircle2, XCircle, Trash2, RefreshCw,
+  Target, Send, AlertTriangle,
+} from "lucide-react";
 
-// ─── Plan section ────────────────────────────────────────────────────────────
-
-function MetaPlan() {
-  const audiences = [
-    {
-      name: "NAR-Aware Sellers",
-      size: "~85K",
-      icp: "Seller",
-      color: "border-signal/40 bg-signal/10 text-signal",
-      definition: "Tampa Bay homeowners, 35–65, owned 3+ yrs, high equity, recently engaged with NAR settlement news",
-      interests: ["Real estate news", "Home selling", "NAR lawsuit", "Redfin", "Zillow"],
-    },
-    {
-      name: "Move-Up Millennials",
-      size: "~120K",
-      icp: "Buyer/Seller",
-      color: "border-blue-500/40 bg-blue-500/10 text-blue-300",
-      definition: "Tampa Bay, 32–42, HHI $90K–$160K, homeowners with equity, engaged with home upgrade content",
-      interests: ["Home renovation", "First-time home buyer", "House hunters", "Mortgage calculator"],
-    },
-    {
-      name: "Gig Worker Chaperones",
-      size: "~45K",
-      icp: "Concierge",
-      color: "border-amber-500/40 bg-amber-500/10 text-amber-300",
-      definition: "Tampa Bay, 21–55, engaged with DoorDash/Uber/Instacart driver content, flexible schedule seekers",
-      interests: ["DoorDash", "Uber", "Gig work", "Side hustle", "Real estate"],
-    },
-  ];
-
-  const placements = [
-    { name: "Instagram Feed", format: "1:1 Static / 9:16 Reel", icp: "All" },
-    { name: "Instagram Stories", format: "9:16 Static / Video", icp: "Buyer / Seller" },
-    { name: "Facebook Feed", format: "1:1 / 4:5 Static", icp: "Seller (older skew)" },
-    { name: "Instagram Reels", format: "9:16 Video", icp: "Buyer / Concierge" },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-              Monthly Budget
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">$—</p>
-            <p className="text-xs text-muted-foreground mt-1">Set budget in Deploy tab</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-              Geo Target
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-signal" />
-              <p className="text-sm font-semibold">Tampa Bay DMA</p>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Hillsborough, Pinellas, Pasco</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-              Objective
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Target className="h-4 w-4 text-signal" />
-              <p className="text-sm font-semibold">Leads</p>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Conversions API + Pixel</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Users className="h-4 w-4 text-signal" />
-            Target Audiences
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {audiences.map(a => (
-            <div key={a.name} className="rounded-md border border-border bg-muted/20 p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge className={`text-[10px] ${a.color}`}>{a.icp}</Badge>
-                <p className="text-sm font-semibold flex-1">{a.name}</p>
-                <span className="text-xs text-muted-foreground font-mono">{a.size}</span>
-              </div>
-              <p className="text-xs text-muted-foreground mb-2">{a.definition}</p>
-              <div className="flex flex-wrap gap-1">
-                {a.interests.map(i => (
-                  <span key={i} className="px-1.5 py-0.5 rounded text-[10px] bg-muted/60 text-muted-foreground">
-                    {i}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Layers className="h-4 w-4 text-signal" />
-            Placement Strategy
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {placements.map(p => (
-            <div key={p.name} className="flex items-center gap-3 px-3 py-2.5 rounded-md border border-border bg-muted/20">
-              <div className="flex-1">
-                <p className="text-sm font-medium">{p.name}</p>
-                <p className="text-xs text-muted-foreground">{p.format}</p>
-              </div>
-              <Badge variant="outline" className="text-[10px]">{p.icp}</Badge>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// ─── Deploy section ──────────────────────────────────────────────────────────
-
-function MetaDeploy() {
-  return (
-    <div className="space-y-5">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Rocket className="h-4 w-4 text-signal" />
-            Meta Marketing API Deployment
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-md border border-border bg-muted/20 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-              Credential Status
-            </p>
-            <div className="space-y-2">
-              {[
-                { name: "Meta App ID", status: "pending", note: "developers.facebook.com" },
-                { name: "App Secret", status: "pending", note: "Add to .env" },
-                { name: "Access Token (long-lived)", status: "pending", note: "Graph API Explorer" },
-                { name: "Ad Account ID", status: "pending", note: "Business Manager" },
-                { name: "Pixel ID", status: "pending", note: "For conversion tracking" },
-              ].map(c => (
-                <div key={c.name} className="flex items-center gap-3 text-xs">
-                  <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                    c.status === "ready" ? "bg-signal" :
-                    c.status === "pending" ? "bg-amber-400" : "bg-muted-foreground/40"
-                  }`} />
-                  <span className="text-foreground font-medium">{c.name}</span>
-                  <span className="text-muted-foreground ml-auto font-mono text-[10px]">{c.note}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" disabled className="h-auto py-3 flex flex-col items-start gap-1">
-              <span className="text-xs font-semibold">1. Upload Audiences</span>
-              <span className="text-[10px] text-muted-foreground font-normal">Create custom + lookalike audiences</span>
-            </Button>
-            <Button variant="outline" disabled className="h-auto py-3 flex flex-col items-start gap-1">
-              <span className="text-xs font-semibold">2. Deploy Ad Sets</span>
-              <span className="text-[10px] text-muted-foreground font-normal">Campaign → AdSet → Ad creation</span>
-            </Button>
-          </div>
-
-          <Placeholder
-            title="Meta Marketing API integration"
-            description="Actions above will use the Meta Marketing API (Campaign, AdSet, AdCreative endpoints) to programmatically build campaigns. Audience upload uses CustomAudience API. Conversions API pushes events from the site's Pixel for iOS14+ tracking."
-            status="needs-key"
-          />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// ─── Monitor section ─────────────────────────────────────────────────────────
-
-function MetaMonitor() {
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-4 gap-3">
-        {[
-          { label: "Reach", value: "—" },
-          { label: "Impressions", value: "—" },
-          { label: "CPM", value: "—" },
-          { label: "Leads", value: "—" },
-        ].map(m => (
-          <Card key={m.label}>
-            <CardContent className="p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{m.label}</p>
-              <p className="text-2xl font-bold mt-1 text-muted-foreground/60">{m.value}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <Placeholder
-        title="Meta Ads Insights"
-        description="Once deployed, pulls performance from the Meta Insights API — reach, impressions, frequency, CPM, CTR, CPC, results, cost per result. Drilldown by audience, placement, creative. Ad Library data also surfaces here to compare our ads against Zillow/Redfin/Opendoor/Homa."
-        status="needs-key"
-      />
-    </div>
-  );
-}
-
-// ─── Main export ─────────────────────────────────────────────────────────────
+function j<T = any>(r: Response): Promise<T> { return r.json(); }
 
 export default function Meta() {
+  const [tab, setTab] = useState("generate");
+
   return (
-    <TacticWorkspace
-      title="Meta"
-      subtitle="Facebook & Instagram ads — high-reach audience targeting for Tampa Bay"
-      icon={<Target className="h-5 w-5" />}
-      accentColor="text-signal"
-      sections={{
-        plan: <MetaPlan />,
-        create: (
-          <EmbeddedCopyGenerator
-            defaultIcp="seller"
-            channelFormat="social"
-            channelLabel="Meta Ads"
-          />
-        ),
-        deploy: <MetaDeploy />,
-        monitor: <MetaMonitor />,
-      }}
-    />
+    <div className="p-6 max-w-7xl mx-auto space-y-4">
+      <div className="flex items-center gap-3 pb-2 border-b">
+        <Target className="h-5 w-5 text-primary" />
+        <div>
+          <h1 className="text-lg font-bold">Meta Ads (Facebook + Instagram)</h1>
+          <p className="text-xs text-muted-foreground">AI-generated ads with human review. Housing Special Ad Category enforced — no demographic targeting.</p>
+        </div>
+      </div>
+
+      <ConnectionBanner />
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="generate"><Sparkles className="h-4 w-4 mr-1.5" />Generate</TabsTrigger>
+          <TabsTrigger value="review"><ImageIcon className="h-4 w-4 mr-1.5" />Review queue</TabsTrigger>
+          <TabsTrigger value="approved"><CheckCircle2 className="h-4 w-4 mr-1.5" />Approved</TabsTrigger>
+          <TabsTrigger value="launched"><Send className="h-4 w-4 mr-1.5" />Launched</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="generate"><GenerateTab /></TabsContent>
+        <TabsContent value="review"><CreativeList status="draft" /></TabsContent>
+        <TabsContent value="approved"><CreativeList status="approved" /></TabsContent>
+        <TabsContent value="launched"><CreativeList status="launched" /></TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function ConnectionBanner() {
+  const { data } = useQuery<any>({ queryKey: ["/api/marketing/meta/status"] });
+  if (!data) return null;
+
+  const pill = (ok: boolean, label: string) => (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${
+      ok ? "bg-green-100 text-green-800 border-green-200" : "bg-amber-100 text-amber-800 border-amber-200"
+    }`}>
+      {ok ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+      {label}
+    </span>
+  );
+
+  return (
+    <Card className="p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        {pill(data.claude, "Claude (copy)")}
+        {pill(data.openai, "DALL-E 3 (images)")}
+        {pill(data.metaConnected, data.metaConnected ? `Meta connected (${data.metaAccountId || "?"})` : "Meta not connected — launch blocked")}
+        <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs bg-blue-100 text-blue-800 border-blue-200">
+          Daily cap ${(data.dailyBudgetCapCents / 100).toFixed(0)}
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs bg-muted text-muted-foreground">
+          Housing SAC enforced
+        </span>
+      </div>
+      {!data.metaConnected && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          You can generate and review creatives now. Launching requires finishing Business Manager + Ad Account setup, then pasting <code className="bg-muted px-1 rounded">META_ACCESS_TOKEN</code>, <code className="bg-muted px-1 rounded">META_AD_ACCOUNT_ID</code>, and <code className="bg-muted px-1 rounded">META_PAGE_ID</code> into Railway.
+        </p>
+      )}
+      {!data.openai && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Add <code className="bg-muted px-1 rounded">OPENAI_API_KEY</code> to Railway for DALL-E 3. Copy-only generation works without it (toggle "with image" off).
+        </p>
+      )}
+    </Card>
+  );
+}
+
+// ─── Generate ─────────────────────────────────────────────────────────────
+
+function GenerateTab() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [form, setForm] = useState({
+    icp: "buyer" as "buyer" | "seller" | "general",
+    brief: "",
+    audienceNote: "",
+    objective: "OUTCOME_TRAFFIC" as "OUTCOME_LEADS" | "OUTCOME_TRAFFIC" | "OUTCOME_ENGAGEMENT" | "OUTCOME_AWARENESS",
+    landingUrl: "https://www.trykeylime.ai",
+    aspectRatio: "1:1" as "1:1" | "4:5" | "9:16",
+    withImage: true,
+  });
+
+  const generate = useMutation({
+    mutationFn: (body: any) => apiRequest("POST", "/api/marketing/meta/creatives/generate", body).then(j),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/marketing/meta/creatives?status=draft"] });
+      toast({ title: "Creative drafted", description: "Check the Review queue." });
+    },
+    onError: (e: any) => toast({ title: "Generation failed", description: e?.message, variant: "destructive" }),
+  });
+
+  return (
+    <Card className="p-5 space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label>ICP</Label>
+          <Select value={form.icp} onValueChange={(v) => setForm({ ...form, icp: v as any })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="buyer">Buyer — browse Tampa homes</SelectItem>
+              <SelectItem value="seller">Seller — list without 6% commission</SelectItem>
+              <SelectItem value="general">General — brand awareness</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Objective</Label>
+          <Select value={form.objective} onValueChange={(v) => setForm({ ...form, objective: v as any })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="OUTCOME_TRAFFIC">Traffic — drive clicks to trykeylime.ai</SelectItem>
+              <SelectItem value="OUTCOME_LEADS">Leads — form fills on Meta</SelectItem>
+              <SelectItem value="OUTCOME_ENGAGEMENT">Engagement — post reach + reactions</SelectItem>
+              <SelectItem value="OUTCOME_AWARENESS">Awareness — broad reach</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div>
+        <Label>Brief</Label>
+        <Textarea
+          rows={3}
+          value={form.brief}
+          onChange={(e) => setForm({ ...form, brief: e.target.value })}
+          placeholder="What should this ad accomplish? e.g., 'Convince Tampa homeowners whose listing recently expired that Key Lime is the 1%-fee alternative. Drive them to the savings calculator on trykeylime.ai.'"
+        />
+      </div>
+      <div>
+        <Label>Audience note <span className="text-xs text-muted-foreground">(internal only — no demographic targeting, Housing SAC)</span></Label>
+        <Input
+          value={form.audienceNote}
+          onChange={(e) => setForm({ ...form, audienceNote: e.target.value })}
+          placeholder="e.g., 'Tampa Bay 15-mile radius, interest: real estate news'"
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <Label>Landing URL</Label>
+          <Input value={form.landingUrl} onChange={(e) => setForm({ ...form, landingUrl: e.target.value })} />
+        </div>
+        <div>
+          <Label>Aspect ratio</Label>
+          <Select value={form.aspectRatio} onValueChange={(v) => setForm({ ...form, aspectRatio: v as any })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1:1">1:1 — Feed (1024×1024)</SelectItem>
+              <SelectItem value="4:5">4:5 — Mobile feed portrait</SelectItem>
+              <SelectItem value="9:16">9:16 — Stories / Reels</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-end">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.withImage}
+              onChange={(e) => setForm({ ...form, withImage: e.target.checked })}
+              className="h-4 w-4"
+            />
+            Generate image (~$0.04-0.08)
+          </label>
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <Button
+          disabled={!form.brief.trim() || generate.isPending}
+          onClick={() => generate.mutate(form)}
+        >
+          <Sparkles className="mr-1.5 h-4 w-4" />
+          {generate.isPending ? "Generating…" : "Generate creative"}
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Copy variants (Claude, ~2s) and image (DALL-E 3, ~10s) are drafted. They land in the Review queue. Human review required before launch.
+      </p>
+    </Card>
+  );
+}
+
+// ─── Creative list (shared across review / approved / launched tabs) ─────
+
+function CreativeList({ status }: { status: "draft" | "approved" | "launched" }) {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const queryKey = `/api/marketing/meta/creatives?status=${status}`;
+  const { data } = useQuery<any>({ queryKey: [queryKey] });
+
+  const approve = useMutation({
+    mutationFn: (id: number) => apiRequest("POST", `/api/marketing/meta/creatives/${id}/approve`).then(j),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/marketing/meta/creatives?status=draft"] });
+      qc.invalidateQueries({ queryKey: ["/api/marketing/meta/creatives?status=approved"] });
+      toast({ title: "Approved" });
+    },
+    onError: (e: any) => toast({ title: "Approve failed", description: e?.message, variant: "destructive" }),
+  });
+
+  const reject = useMutation({
+    mutationFn: (id: number) => apiRequest("POST", `/api/marketing/meta/creatives/${id}/reject`).then(j),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/marketing/meta/creatives?status=draft"] });
+      toast({ title: "Rejected" });
+    },
+  });
+
+  const del = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/marketing/meta/creatives/${id}`).then(j),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [queryKey] }),
+  });
+
+  const regenImage = useMutation({
+    mutationFn: (id: number) => apiRequest("POST", `/api/marketing/meta/creatives/${id}/regenerate-image`, {}).then(j),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [queryKey] });
+      toast({ title: "New image generated" });
+    },
+    onError: (e: any) => toast({ title: "Regen failed", description: e?.message, variant: "destructive" }),
+  });
+
+  const launch = useMutation({
+    mutationFn: (id: number) => apiRequest("POST", `/api/marketing/meta/creatives/${id}/launch`).then(j),
+    onSuccess: (d: any) => toast({ title: d?.message || "Launch requested" }),
+    onError: (e: any) => toast({ title: "Launch blocked", description: e?.message, variant: "destructive" }),
+  });
+
+  const creatives = data?.creatives || [];
+  if (creatives.length === 0) {
+    return (
+      <Card className="p-8 text-center text-muted-foreground">
+        {status === "draft" ? "No drafts. Go to Generate to create one." :
+         status === "approved" ? "No approved creatives yet. Approve one from the Review queue." :
+         "No launched ads yet. Meta connection required before launch."}
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {creatives.map((c: any) => (
+        <Card key={c.id} className="overflow-hidden">
+          <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr]">
+            <div className="bg-muted/30 aspect-square sm:h-full relative">
+              {c.imageUrl ? (
+                <img src={c.imageUrl} alt={c.headline} className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-xs p-4 text-center">
+                  <ImageIcon className="h-6 w-6 mb-1.5" />
+                  No image
+                </div>
+              )}
+            </div>
+            <div className="p-4 space-y-2 min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Badge variant="outline" className="text-[10px]">{c.icp}</Badge>
+                <Badge variant="outline" className="text-[10px]">{c.objective.replace("OUTCOME_", "").toLowerCase()}</Badge>
+                <Badge variant="outline" className="text-[10px]">{c.aspectRatio}</Badge>
+                <Badge variant={c.status === "approved" ? "default" : "outline"} className="text-[10px]">{c.status}</Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Primary text</p>
+                <p className="text-sm">{c.primaryText}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Headline · Description</p>
+                <p className="text-sm font-semibold">{c.headline}</p>
+                {c.description && <p className="text-xs text-muted-foreground">{c.description}</p>}
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <span>CTA: <code className="bg-muted px-1 rounded">{c.ctaButton}</code></span>
+                <span>·</span>
+                <a href={c.landingUrl} target="_blank" rel="noreferrer" className="underline truncate">{c.landingUrl}</a>
+              </div>
+              {c.rationale && (
+                <p className="text-[11px] italic text-muted-foreground">Why: {c.rationale}</p>
+              )}
+              {c.generationCostCents > 0 && (
+                <p className="text-[10px] text-muted-foreground">Cost so far: ${(c.generationCostCents / 100).toFixed(3)}</p>
+              )}
+              <div className="flex gap-1.5 pt-1 flex-wrap">
+                {status === "draft" && (
+                  <>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => approve.mutate(c.id)}>
+                      <CheckCircle2 className="h-3 w-3 mr-1" />Approve
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => reject.mutate(c.id)}>
+                      <XCircle className="h-3 w-3 mr-1" />Reject
+                    </Button>
+                  </>
+                )}
+                {status === "approved" && (
+                  <Button size="sm" className="h-7 text-xs" disabled={launch.isPending} onClick={() => launch.mutate(c.id)}>
+                    <Send className="h-3 w-3 mr-1" />Launch to Meta
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={regenImage.isPending} onClick={() => regenImage.mutate(c.id)}>
+                  <RefreshCw className="h-3 w-3 mr-1" />Re-roll image
+                </Button>
+                <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={() => { if (confirm("Delete this creative?")) del.mutate(c.id); }}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
   );
 }
