@@ -1,8 +1,14 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
+import MemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { initMarketingDb } from "./marketing/db";
+import { setupMarketingAuth } from "./marketing/auth";
+import { registerMarketingRoutes } from "./marketing/routes";
+import { tickDripEngine } from "./marketing/drip-engine";
 
 const app = express();
 const httpServer = createServer(app);
@@ -22,6 +28,22 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+// Session — backs the marketing admin auth cookie.
+const SessionStore = MemoryStore(session);
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "marketinghq-session-secret-change-in-prod",
+    resave: false,
+    saveUninitialized: false,
+    store: new SessionStore({ checkPeriod: 86400000 }),
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    },
+  }),
+);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -61,6 +83,12 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize marketing DB + routes before the legacy registerRoutes mounts
+  // its Vite catch-all.
+  await initMarketingDb();
+  setupMarketingAuth(app);
+  registerMarketingRoutes(app);
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
@@ -102,4 +130,19 @@ app.use((req, res, next) => {
       log(`serving on http://${host}:${port}`);
     },
   );
+
+  // Drip engine tick — runs every 60s. Safe to run when the queue is empty.
+  setInterval(async () => {
+    try {
+      const result = await tickDripEngine({ maxPerTick: 100 });
+      if (result.processed > 0) {
+        log(
+          `drip tick: processed=${result.processed} sent=${result.sent} errors=${result.errors} skipped=${result.skipped}`,
+          "marketing",
+        );
+      }
+    } catch (err) {
+      console.error("[marketing/drip-engine] tick error:", err);
+    }
+  }, 60_000);
 })();
