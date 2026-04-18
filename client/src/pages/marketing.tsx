@@ -659,6 +659,8 @@ function CampaignsTab() {
   const { data: templatesData } = useQuery<any>({ queryKey: ["/api/marketing/templates"] });
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", listId: "", templateId: "" });
+  const [testCampaignId, setTestCampaignId] = useState<number | null>(null);
+  const [testEmail, setTestEmail] = useState("");
 
   const create = useMutation({
     mutationFn: (body: any) => apiRequest("POST", "/api/marketing/campaigns", { ...body, listId: Number(body.listId), templateId: Number(body.templateId) }).then(j),
@@ -678,6 +680,21 @@ function CampaignsTab() {
       toast({ title: "Campaign sent", description: `${d.stats.sent} sent, ${d.stats.failed} failed` });
     },
     onError: (e: any) => toast({ title: "Send failed", description: e.message, variant: "destructive" }),
+  });
+
+  const testSend = useMutation({
+    mutationFn: ({ id, email }: { id: number; email: string }) =>
+      apiRequest("POST", `/api/marketing/campaigns/${id}/test-send`, { email }).then(j),
+    onSuccess: (d: any) => {
+      if (d.sent) {
+        toast({ title: "Test sent", description: d.stubbed ? "Stub mode (no RESEND_API_KEY) — check server logs." : `Delivered to your inbox. Resend id: ${d.resendId?.slice(0, 8)}…` });
+      } else {
+        toast({ title: "Test not sent", description: d.error || "Unknown error", variant: "destructive" });
+      }
+      setTestCampaignId(null);
+      setTestEmail("");
+    },
+    onError: (e: any) => toast({ title: "Test failed", description: e?.message || "Unknown error", variant: "destructive" }),
   });
 
   return (
@@ -735,11 +752,16 @@ function CampaignsTab() {
                   </td>
                   <td className="p-3 text-muted-foreground">{formatDate(c.createdAt)}</td>
                   <td className="p-3 text-right">
-                    {c.status === "draft" && (
-                      <Button size="sm" variant="outline" disabled={send.isPending} onClick={() => { if (confirm("Send this campaign now?")) send.mutate(c.id); }}>
-                        <Send className="mr-1.5 h-3.5 w-3.5" />Send
+                    <div className="flex gap-2 justify-end">
+                      <Button size="sm" variant="ghost" onClick={() => { setTestCampaignId(c.id); setTestEmail(""); }}>
+                        <Mail className="mr-1.5 h-3.5 w-3.5" />Send test
                       </Button>
-                    )}
+                      {c.status === "draft" && (
+                        <Button size="sm" variant="outline" disabled={send.isPending} onClick={() => { if (confirm(`Send "${c.name}" to the full list now? This cannot be undone.`)) send.mutate(c.id); }}>
+                          <Send className="mr-1.5 h-3.5 w-3.5" />Send to list
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -748,6 +770,36 @@ function CampaignsTab() {
           </tbody>
         </table>
       </Card>
+
+      <Dialog open={testCampaignId !== null} onOpenChange={(v) => { if (!v) setTestCampaignId(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Send test email</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Sends a single rendered preview to the address below. The email is prefixed with <code className="bg-muted px-1 rounded">[TEST]</code> in the subject, stats aren't affected, and no contact row is created.
+            </p>
+            <div>
+              <Label>Send to</Label>
+              <Input
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="you@trykeylime.ai"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestCampaignId(null)}>Cancel</Button>
+            <Button
+              disabled={!testEmail || testSend.isPending}
+              onClick={() => testCampaignId && testSend.mutate({ id: testCampaignId, email: testEmail })}
+            >
+              {testSend.isPending ? "Sending…" : "Send test"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

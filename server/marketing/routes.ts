@@ -387,6 +387,58 @@ export function registerMarketingRoutes(app: Express) {
     res.json({ campaignId, stats });
   });
 
+  // Send a single rendered preview of a campaign to an arbitrary email.
+  // Useful for proofing copy + deliverability before firing the real list.
+  // Does NOT touch the campaign status, does NOT log against contact_id.
+  app.post("/api/marketing/campaigns/:id/test-send", requireAdmin, async (req, res) => {
+    const campaignId = parseInt(String(req.params.id), 10);
+    const schema = z.object({ email: z.string().email() });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Valid email required" });
+
+    const [campaign] = await db.select().from(emailCampaigns).where(eq(emailCampaigns.id, campaignId)).limit(1);
+    if (!campaign) return res.status(404).json({ message: "Campaign not found" });
+
+    const [template] = await db.select().from(emailTemplates).where(eq(emailTemplates.id, campaign.templateId)).limit(1);
+    if (!template) return res.status(404).json({ message: "Template not found" });
+
+    // Use a stub contact so variables resolve without creating a real row.
+    // The unsubscribe token still resolves if the recipient clicks, because
+    // we use contactId 0 — the unsubscribe handler will just no-op gracefully
+    // (no matching contact, still renders the success page).
+    const stubContact: any = {
+      id: 0,
+      email: parsed.data.email,
+      firstName: "Test",
+      lastName: "Recipient",
+      phone: null,
+      address: null,
+      city: null,
+      state: null,
+      zip: null,
+      optedOut: false,
+      verifiedEmail: true,
+      source: "test",
+      metadata: "{}",
+    };
+    const token = generateUnsubscribeToken(0);
+    const rendered = render(template, { contact: stubContact, unsubscribeToken: token });
+
+    const result = await sendEmail({
+      to: parsed.data.email,
+      subject: `[TEST] ${rendered.subject}`,
+      html: rendered.html,
+      text: rendered.text,
+      tags: { campaign_id: String(campaignId), test_send: "true" },
+      headers: {
+        "List-Unsubscribe": `<${process.env.APP_BASE_URL || "https://marketinghq-production.up.railway.app"}/u/${token}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    });
+
+    res.json({ sent: result.success, resendId: result.resendId, stubbed: result.stubbed, error: result.error });
+  });
+
   // ── Drip Sequences ──
   app.get("/api/marketing/drips", requireAdmin, async (_req, res) => {
     const seqs = await db.select().from(dripSequences).orderBy(desc(dripSequences.createdAt));
