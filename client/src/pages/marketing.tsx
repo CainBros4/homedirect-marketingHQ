@@ -203,6 +203,25 @@ function ContactsTab() {
   const [bulkSource, setBulkSource] = useState("manual");
   const [bulkPreview, setBulkPreview] = useState<ParsedContact[]>([]);
   const [form, setForm] = useState({ email: "", firstName: "", lastName: "", phone: "", city: "", state: "", zip: "", source: "manual" });
+  const [filter, setFilter] = useState<"all" | "active" | "opted_out" | "bounced">("all");
+
+  const optOut = useMutation({
+    mutationFn: (id: number) => apiRequest("POST", `/api/marketing/contacts/${id}/opt-out`).then(j),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/marketing/contacts"] });
+      toast({ title: "Contact opted out", description: "They won't receive further emails." });
+    },
+    onError: (e: any) => toast({ title: "Failed", description: e?.message || "Unknown error", variant: "destructive" }),
+  });
+
+  const optIn = useMutation({
+    mutationFn: (id: number) => apiRequest("POST", `/api/marketing/contacts/${id}/opt-in`).then(j),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/marketing/contacts"] });
+      toast({ title: "Contact re-subscribed" });
+    },
+    onError: (e: any) => toast({ title: "Failed", description: e?.message || "Unknown error", variant: "destructive" }),
+  });
 
   const create = useMutation({
     mutationFn: (body: any) => apiRequest("POST", "/api/marketing/contacts", body).then(j),
@@ -340,30 +359,103 @@ function ContactsTab() {
         </div>
       </div>
 
-      <Card>
-        <table className="w-full text-sm">
-          <thead className="border-b bg-muted/50">
-            <tr className="text-left">
-              <th className="p-3">Email</th><th className="p-3">Name</th><th className="p-3">City</th><th className="p-3">Source</th><th className="p-3">Status</th><th className="p-3">Added</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(data?.contacts || []).map((c: any) => (
-              <tr key={c.id} className="border-b hover:bg-muted/30">
-                <td className="p-3 font-mono text-xs">{c.email}</td>
-                <td className="p-3">{[c.firstName, c.lastName].filter(Boolean).join(" ") || "—"}</td>
-                <td className="p-3">{c.city || "—"}</td>
-                <td className="p-3"><Badge variant="outline">{c.source}</Badge></td>
-                <td className="p-3">{c.optedOut ? <StatusPill kind="err" label="opted out" /> : c.verifiedEmail ? <StatusPill kind="ok" label="verified" /> : <StatusPill kind="warn" label="unverified" />}</td>
-                <td className="p-3 text-muted-foreground">{formatDate(c.createdAt)}</td>
-              </tr>
-            ))}
-            {(data?.contacts || []).length === 0 && (
-              <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No contacts yet. Add your first one above, or import from MLS search.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </Card>
+      {(() => {
+        const all = data?.contacts || [];
+        const counts = {
+          all: all.length,
+          active: all.filter((c: any) => !c.optedOut && !c.bouncedAt).length,
+          opted_out: all.filter((c: any) => c.optedOut).length,
+          bounced: all.filter((c: any) => c.bouncedAt && !c.optedOut).length,
+        };
+        const filtered = all.filter((c: any) => {
+          if (filter === "all") return true;
+          if (filter === "active") return !c.optedOut && !c.bouncedAt;
+          if (filter === "opted_out") return c.optedOut;
+          if (filter === "bounced") return c.bouncedAt && !c.optedOut;
+          return true;
+        });
+        const tabBtn = (key: typeof filter, label: string, count: number) => (
+          <button
+            key={key}
+            onClick={() => setFilter(key)}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              filter === key
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+          >
+            {label} <span className="ml-1 opacity-70">{count}</span>
+          </button>
+        );
+        return (
+          <>
+            <div className="flex items-center gap-1 border-b pb-2">
+              {tabBtn("all", "All", counts.all)}
+              {tabBtn("active", "Active", counts.active)}
+              {tabBtn("opted_out", "Opted out", counts.opted_out)}
+              {tabBtn("bounced", "Bounced", counts.bounced)}
+            </div>
+            <Card>
+              <table className="w-full text-sm">
+                <thead className="border-b bg-muted/50">
+                  <tr className="text-left">
+                    <th className="p-3">Email</th>
+                    <th className="p-3">Name</th>
+                    <th className="p-3">City</th>
+                    <th className="p-3">Source</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">Added</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((c: any) => (
+                    <tr key={c.id} className="border-b hover:bg-muted/30">
+                      <td className="p-3 font-mono text-xs">{c.email}</td>
+                      <td className="p-3">{[c.firstName, c.lastName].filter(Boolean).join(" ") || "—"}</td>
+                      <td className="p-3">{c.city || "—"}</td>
+                      <td className="p-3"><Badge variant="outline">{c.source}</Badge></td>
+                      <td className="p-3">
+                        {c.optedOut ? (
+                          <div className="flex flex-col gap-0.5">
+                            <StatusPill kind="err" label="opted out" />
+                            {c.optedOutAt && <span className="text-[10px] text-muted-foreground">{formatDate(c.optedOutAt)}</span>}
+                          </div>
+                        ) : c.bouncedAt ? (
+                          <StatusPill kind="err" label="bounced" />
+                        ) : c.verifiedEmail ? (
+                          <StatusPill kind="ok" label="verified" />
+                        ) : (
+                          <StatusPill kind="warn" label="unverified" />
+                        )}
+                      </td>
+                      <td className="p-3 text-muted-foreground">{formatDate(c.createdAt)}</td>
+                      <td className="p-3 text-right">
+                        {c.optedOut ? (
+                          <Button size="sm" variant="ghost" disabled={optIn.isPending} onClick={() => optIn.mutate(c.id)}>
+                            Re-subscribe
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="ghost" disabled={optOut.isPending} onClick={() => {
+                            if (confirm(`Opt out ${c.email}? They will not receive any further emails.`)) optOut.mutate(c.id);
+                          }}>
+                            Opt out
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {filtered.length === 0 && (
+                    <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">
+                      {all.length === 0 ? "No contacts yet. Add your first one above, or import from MLS search." : `No contacts match the "${filter.replace("_", " ")}" filter.`}
+                    </td></tr>
+                  )}
+                </tbody>
+              </table>
+            </Card>
+          </>
+        );
+      })()}
     </div>
   );
 }
@@ -661,6 +753,7 @@ function CampaignsTab() {
   const [form, setForm] = useState({ name: "", listId: "", templateId: "" });
   const [testCampaignId, setTestCampaignId] = useState<number | null>(null);
   const [testEmail, setTestEmail] = useState("");
+  const [sendConfirmId, setSendConfirmId] = useState<number | null>(null);
 
   const create = useMutation({
     mutationFn: (body: any) => apiRequest("POST", "/api/marketing/campaigns", { ...body, listId: Number(body.listId), templateId: Number(body.templateId) }).then(j),
@@ -757,7 +850,7 @@ function CampaignsTab() {
                         <Mail className="mr-1.5 h-3.5 w-3.5" />Send test
                       </Button>
                       {c.status === "draft" && (
-                        <Button size="sm" variant="outline" disabled={send.isPending} onClick={() => { if (confirm(`Send "${c.name}" to the full list now? This cannot be undone.`)) send.mutate(c.id); }}>
+                        <Button size="sm" variant="outline" disabled={send.isPending} onClick={() => setSendConfirmId(c.id)}>
                           <Send className="mr-1.5 h-3.5 w-3.5" />Send to list
                         </Button>
                       )}
@@ -800,7 +893,96 @@ function CampaignsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {sendConfirmId !== null && (
+        <SendConfirmDialog
+          campaignId={sendConfirmId}
+          campaignName={(data?.campaigns || []).find((c: any) => c.id === sendConfirmId)?.name || ""}
+          onClose={() => setSendConfirmId(null)}
+          onConfirm={() => { send.mutate(sendConfirmId); setSendConfirmId(null); }}
+          sending={send.isPending}
+        />
+      )}
     </div>
+  );
+}
+
+function SendConfirmDialog({
+  campaignId,
+  campaignName,
+  onClose,
+  onConfirm,
+  sending,
+}: {
+  campaignId: number;
+  campaignName: string;
+  onClose: () => void;
+  onConfirm: () => void;
+  sending: boolean;
+}) {
+  const { data: preview, isLoading } = useQuery<any>({
+    queryKey: [`/api/marketing/campaigns/${campaignId}/preview`],
+  });
+
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Send "{campaignName}"</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Calculating recipient breakdown…</p>
+          ) : preview ? (
+            <div className="space-y-3">
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm">Will send to</span>
+                  <span className="text-2xl font-semibold">{preview.sendable}</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  out of {preview.totalOnList} contact{preview.totalOnList === 1 ? "" : "s"} on this list
+                </div>
+              </div>
+              {preview.totalSuppressed > 0 && (
+                <div className="rounded-lg border p-3 space-y-1.5 text-xs">
+                  <div className="font-semibold text-muted-foreground uppercase tracking-wider text-[10px]">Suppressed — will NOT receive</div>
+                  {preview.suppressedOptedOut > 0 && (
+                    <div className="flex justify-between">
+                      <span>Opted out</span>
+                      <span className="font-mono">{preview.suppressedOptedOut}</span>
+                    </div>
+                  )}
+                  {preview.suppressedBounced > 0 && (
+                    <div className="flex justify-between">
+                      <span>Previously bounced</span>
+                      <span className="font-mono">{preview.suppressedBounced}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {preview.sendable === 0 && (
+                <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3">
+                  Nobody on this list is eligible to receive. Add contacts first, or re-subscribe opted-out members.
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                This will run now and cannot be stopped partway through.
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-destructive">Couldn't load preview.</p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            disabled={isLoading || !preview?.sendable || sending}
+            onClick={onConfirm}
+          >
+            {sending ? "Sending…" : `Send to ${preview?.sendable ?? 0}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

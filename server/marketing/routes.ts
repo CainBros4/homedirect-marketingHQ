@@ -387,6 +387,76 @@ export function registerMarketingRoutes(app: Express) {
     res.json({ campaignId, stats });
   });
 
+  // Preview what will happen when this campaign sends: how many contacts
+  // on the list, how many will actually receive (opted-in + not bounced),
+  // and a breakdown of what's suppressed. Used by the Send confirmation
+  // dialog so admins see exactly who the email reaches before firing.
+  app.get("/api/marketing/campaigns/:id/preview", requireAdmin, async (req, res) => {
+    const campaignId = parseInt(String(req.params.id), 10);
+    const [campaign] = await db.select().from(emailCampaigns).where(eq(emailCampaigns.id, campaignId)).limit(1);
+    if (!campaign) return res.status(404).json({ message: "Campaign not found" });
+
+    const members = await db
+      .select({
+        id: contacts.id,
+        optedOut: contacts.optedOut,
+        bouncedAt: contacts.bouncedAt,
+      })
+      .from(listMemberships)
+      .innerJoin(contacts, eq(contacts.id, listMemberships.contactId))
+      .where(eq(listMemberships.listId, campaign.listId));
+
+    let sendable = 0;
+    let suppressedOptedOut = 0;
+    let suppressedBounced = 0;
+    for (const m of members) {
+      if (m.optedOut) suppressedOptedOut++;
+      else if (m.bouncedAt) suppressedBounced++;
+      else sendable++;
+    }
+    res.json({
+      campaignId,
+      listId: campaign.listId,
+      totalOnList: members.length,
+      sendable,
+      suppressedOptedOut,
+      suppressedBounced,
+      totalSuppressed: suppressedOptedOut + suppressedBounced,
+    });
+  });
+
+  // Manually toggle a contact's opt-out state. Logged as a synthetic
+  // email_event so the audit trail shows why the status changed.
+  app.post("/api/marketing/contacts/:id/opt-out", requireAdmin, async (req, res) => {
+    const id = parseInt(String(req.params.id), 10);
+    await db
+      .update(contacts)
+      .set({ optedOut: true, optedOutAt: nowIso(), updatedAt: nowIso() })
+      .where(eq(contacts.id, id));
+    await db.insert(emailEvents).values({
+      contactId: id,
+      eventType: "unsubscribed",
+      eventData: JSON.stringify({ source: "admin_manual", at: nowIso() }),
+      createdAt: nowIso(),
+    });
+    res.json({ ok: true });
+  });
+
+  app.post("/api/marketing/contacts/:id/opt-in", requireAdmin, async (req, res) => {
+    const id = parseInt(String(req.params.id), 10);
+    await db
+      .update(contacts)
+      .set({ optedOut: false, optedOutAt: null, updatedAt: nowIso() })
+      .where(eq(contacts.id, id));
+    await db.insert(emailEvents).values({
+      contactId: id,
+      eventType: "resubscribed",
+      eventData: JSON.stringify({ source: "admin_manual", at: nowIso() }),
+      createdAt: nowIso(),
+    });
+    res.json({ ok: true });
+  });
+
   // Send a single rendered preview of a campaign to an arbitrary email.
   // Useful for proofing copy + deliverability before firing the real list.
   // Does NOT touch the campaign status, does NOT log against contact_id.
