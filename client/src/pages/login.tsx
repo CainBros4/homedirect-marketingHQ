@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 import { Zap } from "lucide-react";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { refresh } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -20,6 +22,7 @@ export default function Login() {
     setBusy(true);
     try {
       await apiRequest("POST", "/api/auth/login", { email: email.trim(), password });
+      await refresh();
       toast({ title: "Signed in" });
       setLocation("/marketing");
     } catch (err: any) {
