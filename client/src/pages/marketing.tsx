@@ -386,6 +386,7 @@ function ListsTab() {
       setForm({ name: "", description: "" });
       toast({ title: "List created" });
     },
+    onError: (e: any) => toast({ title: "Create failed", description: e?.message || "Unknown error", variant: "destructive" }),
   });
 
   return (
@@ -449,6 +450,7 @@ function ListDetailDialog({ list, onClose }: { list: any; onClose: () => void })
       setSelectedIds(new Set());
       toast({ title: "Added to list", description: `${r.added} contact${r.added === 1 ? "" : "s"} added` });
     },
+    onError: (e: any) => toast({ title: "Failed to add contacts", description: e?.message || "Unknown error", variant: "destructive" }),
   });
 
   const candidates = (allContacts?.contacts || []).filter((c: any) => {
@@ -666,6 +668,7 @@ function CampaignsTab() {
       setForm({ name: "", listId: "", templateId: "" });
       toast({ title: "Campaign created" });
     },
+    onError: (e: any) => toast({ title: "Create failed", description: e?.message || "Unknown error", variant: "destructive" }),
   });
 
   const send = useMutation({
@@ -779,11 +782,13 @@ function DripsTab() {
   const activate = useMutation({
     mutationFn: (id: number) => apiRequest("POST", `/api/marketing/drips/${id}/activate`).then(j),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/marketing/drips"] }); toast({ title: "Drip activated" }); },
+    onError: (e: any) => toast({ title: "Activate failed", description: e?.message || "Unknown error", variant: "destructive" }),
   });
 
   const tick = useMutation({
     mutationFn: () => apiRequest("POST", "/api/marketing/drips/tick").then(j),
     onSuccess: (d: any) => toast({ title: "Tick complete", description: `${d.sent} sent, ${d.errors} errors, ${d.skipped} skipped` }),
+    onError: (e: any) => toast({ title: "Tick failed", description: e?.message || "Unknown error", variant: "destructive" }),
   });
 
   return (
@@ -880,6 +885,7 @@ function MlsTab() {
   const imp = useMutation({
     mutationFn: (listings: any[]) => apiRequest("POST", "/api/marketing/mls/import", { listings }).then(j),
     onSuccess: (d: any) => toast({ title: "Imported", description: `${d.inserted} new, ${d.updated} already existed` }),
+    onError: (e: any) => toast({ title: "Import failed", description: e?.message || "Unknown error", variant: "destructive" }),
   });
 
   const toggleStatus = (s: string) => {

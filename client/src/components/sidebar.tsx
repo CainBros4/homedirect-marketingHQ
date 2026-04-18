@@ -1,13 +1,14 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Search, Settings, Zap, Target, Globe, Rocket, BookOpen, ExternalLink } from "lucide-react";
+import { LayoutDashboard, Search, Settings, Zap, Target, Globe, Rocket, BookOpen, ExternalLink, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/",     label: "Dashboard", icon: LayoutDashboard, live: true },
-  { href: "/seo",  label: "SEO",       icon: Globe,           live: true },
-  { href: "/meta", label: "Meta",      icon: Target,          live: true },
-  { href: "/ppc",  label: "PPC",       icon: Search,          live: true },
+  { href: "/",           label: "Dashboard", icon: LayoutDashboard, live: true },
+  { href: "/seo",        label: "SEO",       icon: Globe,           live: true },
+  { href: "/meta",       label: "Meta",      icon: Target,          live: true },
+  { href: "/ppc",        label: "PPC",       icon: Search,          live: true },
+  { href: "/marketing",  label: "Email",     icon: Mail,            live: true },
 ];
 
 const COMING_SOON: { label: string; icon: React.ElementType }[] = [];
