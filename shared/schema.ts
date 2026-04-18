@@ -356,3 +356,50 @@ export const skipTraceLog = sqliteTable("skip_trace_log", {
 export const insertSkipTraceLogSchema = createInsertSchema(skipTraceLog).omit({ id: true, createdAt: true });
 export type InsertSkipTraceLog = z.infer<typeof insertSkipTraceLogSchema>;
 export type SkipTraceLog = typeof skipTraceLog.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SEO — idea pipeline, AEO-optimized articles, publish state
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const seoArticleIdeas = sqliteTable("seo_article_ideas", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  targetQuery: text("target_query").notNull(),
+  title: text("title").notNull(),
+  angle: text("angle"),
+  searchIntent: text("search_intent"), // informational | commercial | transactional | navigational
+  icp: text("icp"), // buyer | seller | concierge
+  tier: text("tier").notNull().default("cluster"), // pillar | cluster | competitor | longtail | local
+  rationale: text("rationale"),
+  estimatedDifficulty: text("estimated_difficulty"), // easy | medium | hard
+  status: text("status").notNull().default("proposed"), // proposed | approved | rejected | written
+  articleId: integer("article_id"),
+  createdAt: text("created_at").notNull().default(""),
+});
+export const insertSeoArticleIdeaSchema = createInsertSchema(seoArticleIdeas).omit({ id: true, createdAt: true });
+export type InsertSeoArticleIdea = z.infer<typeof insertSeoArticleIdeaSchema>;
+export type SeoArticleIdea = typeof seoArticleIdeas.$inferSelect;
+
+export const seoArticles = sqliteTable("seo_articles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  metaDescription: text("meta_description").notNull(),
+  targetQuery: text("target_query").notNull(),
+  icp: text("icp"),
+  bodyHtml: text("body_html").notNull(),
+  bodyMarkdown: text("body_markdown"),
+  faqs: text("faqs").notNull().default("[]"), // JSON array of { q, a }
+  structuredData: text("structured_data").notNull().default("{}"), // JSON-LD
+  wordCount: integer("word_count").notNull().default(0),
+  readingMinutes: integer("reading_minutes").notNull().default(0),
+  ideaId: integer("idea_id"),
+  status: text("status").notNull().default("draft"), // draft | published | archived
+  publishedAt: text("published_at"),
+  featuredImage: text("featured_image"),
+  tags: text("tags").notNull().default("[]"),
+  createdAt: text("created_at").notNull().default(""),
+  updatedAt: text("updated_at").notNull().default(""),
+});
+export const insertSeoArticleSchema = createInsertSchema(seoArticles).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertSeoArticle = z.infer<typeof insertSeoArticleSchema>;
+export type SeoArticle = typeof seoArticles.$inferSelect;

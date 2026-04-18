@@ -185,6 +185,46 @@ const MARKETING_SQLITE_TABLES_SQL = `
     response TEXT NOT NULL DEFAULT '{}',
     created_at TEXT NOT NULL DEFAULT ''
   );
+
+  CREATE TABLE IF NOT EXISTS seo_article_ideas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_query TEXT NOT NULL,
+    title TEXT NOT NULL,
+    angle TEXT,
+    search_intent TEXT,
+    icp TEXT,
+    tier TEXT NOT NULL DEFAULT 'cluster',
+    rationale TEXT,
+    estimated_difficulty TEXT,
+    status TEXT NOT NULL DEFAULT 'proposed',
+    article_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT ''
+  );
+  CREATE INDEX IF NOT EXISTS idx_seo_ideas_status ON seo_article_ideas(status);
+
+  CREATE TABLE IF NOT EXISTS seo_articles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    meta_description TEXT NOT NULL,
+    target_query TEXT NOT NULL,
+    icp TEXT,
+    body_html TEXT NOT NULL,
+    body_markdown TEXT,
+    faqs TEXT NOT NULL DEFAULT '[]',
+    structured_data TEXT NOT NULL DEFAULT '{}',
+    word_count INTEGER NOT NULL DEFAULT 0,
+    reading_minutes INTEGER NOT NULL DEFAULT 0,
+    idea_id INTEGER,
+    status TEXT NOT NULL DEFAULT 'draft',
+    published_at TEXT,
+    featured_image TEXT,
+    tags TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+  );
+  CREATE INDEX IF NOT EXISTS idx_seo_articles_status ON seo_articles(status);
+  CREATE INDEX IF NOT EXISTS idx_seo_articles_slug ON seo_articles(slug);
 `;
 
 // Postgres version — boolean columns become BOOLEAN, INTEGER PRIMARY KEY
@@ -356,6 +396,46 @@ const MARKETING_PG_TABLES_SQL = `
     response TEXT NOT NULL DEFAULT '{}',
     created_at TEXT NOT NULL DEFAULT ''
   );
+
+  CREATE TABLE IF NOT EXISTS seo_article_ideas (
+    id SERIAL PRIMARY KEY,
+    target_query TEXT NOT NULL,
+    title TEXT NOT NULL,
+    angle TEXT,
+    search_intent TEXT,
+    icp TEXT,
+    tier TEXT NOT NULL DEFAULT 'cluster',
+    rationale TEXT,
+    estimated_difficulty TEXT,
+    status TEXT NOT NULL DEFAULT 'proposed',
+    article_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT ''
+  );
+  CREATE INDEX IF NOT EXISTS idx_seo_ideas_status ON seo_article_ideas(status);
+
+  CREATE TABLE IF NOT EXISTS seo_articles (
+    id SERIAL PRIMARY KEY,
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    meta_description TEXT NOT NULL,
+    target_query TEXT NOT NULL,
+    icp TEXT,
+    body_html TEXT NOT NULL,
+    body_markdown TEXT,
+    faqs TEXT NOT NULL DEFAULT '[]',
+    structured_data TEXT NOT NULL DEFAULT '{}',
+    word_count INTEGER NOT NULL DEFAULT 0,
+    reading_minutes INTEGER NOT NULL DEFAULT 0,
+    idea_id INTEGER,
+    status TEXT NOT NULL DEFAULT 'draft',
+    published_at TEXT,
+    featured_image TEXT,
+    tags TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+  );
+  CREATE INDEX IF NOT EXISTS idx_seo_articles_status ON seo_articles(status);
+  CREATE INDEX IF NOT EXISTS idx_seo_articles_slug ON seo_articles(slug);
 `;
 
 export async function initMarketingDb(): Promise<void> {
