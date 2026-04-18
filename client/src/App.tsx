@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/lib/auth";
 import Sidebar from "@/components/sidebar";
 import Dashboard from "@/pages/dashboard";
 import Seo from "@/pages/seo";
@@ -19,6 +20,8 @@ import History from "@/pages/history";
 import PerformanceBoard from "@/pages/performance-board";
 import AssetLibrary from "@/pages/asset-library";
 import VideoGenerator from "@/pages/video-generator";
+import Marketing from "@/pages/marketing";
+import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
 function AppShell() {
@@ -41,6 +44,8 @@ function AppShell() {
           <Route path="/performance-board" component={PerformanceBoard} />
           <Route path="/asset-library" component={AssetLibrary} />
           <Route path="/video-generator" component={VideoGenerator} />
+          <Route path="/marketing" component={Marketing} />
+          <Route path="/login" component={Login} />
           <Route component={NotFound} />
         </Switch>
       </main>
@@ -52,9 +57,11 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Router hook={useHashLocation}>
-          <AppShell />
-        </Router>
+        <AuthProvider>
+          <Router hook={useHashLocation}>
+            <AppShell />
+          </Router>
+        </AuthProvider>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
